@@ -63,6 +63,8 @@ import AdminRouteGuard from './admin/components/AdminRoute';
 import { useTheme } from './context/ThemeContext';
 import OrderSuccessScreen from './pages/OrderSuccessScreen';
 
+
+
 const RouteScopeSync = () => {
   const { pathname } = useLocation();
 
@@ -85,38 +87,34 @@ const App = () => {
 
   const [socket, setSocket] = useState(null);
   const [currentBackend, setCurrentBackend] = useState(getActiveBackendUrl());
-
   useEffect(() => {
-    // Initialize connection to the currently active node
-    const socketInstance = io(currentBackend, {
-      withCredentials: true,
+    let activeSocketUrl = getActiveBackendUrl();
+
+    // Establish the web socket channel using our adaptive cluster tracking path
+    const socket = io(activeSocketUrl, {
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 3, // Try 3 times before giving up on this node
-      timeout: 5000            // 5 seconds timeout before triggering fallback
+      timeout: 5000,
+      reconnectionAttempts: 3
     });
 
-    socketInstance.on('connect', () => {
-      console.log(`✅ Linked safely to live cluster node: ${currentBackend} (ID: ${socketInstance.id})`);
+    socket.on('connect_error', (error) => {
+      console.warn(`❌ Socket Gateway [${activeSocketUrl}] is unreachable.`);
+
+      // Rotate the cluster network registry key tracking state
+      const fallbackSocketUrl = rotateBackendNode(activeSocketUrl);
+
+      // Safely disconnect the broken engine stream instance
+      socket.disconnect();
+
+      // Force a minor page state synchronization layout refresh to fully realign RTK Query
+      console.log(`♻️ Syncing application layout with operational peer node: ${fallbackSocketUrl}`);
+      window.location.reload();
     });
 
-    socketInstance.on('connect_error', () => {
-      console.error(`❌ Node ${currentBackend} is unreachable.`);
-      
-      // Close out current failing socket instance safely
-      socketInstance.disconnect();
-      
-      // Rotate target IPs across your network array
-      const nextNode = rotateBackendNode(currentBackend);
-      setCurrentBackend(nextNode);
-    });
-
-    setSocket(socketInstance);
-
-    // Clean up connections on component dismount
     return () => {
-      socketInstance.disconnect();
+      socket.disconnect();
     };
-  }, [currentBackend]);
+  }, []);
 
   return (
     <Router>
