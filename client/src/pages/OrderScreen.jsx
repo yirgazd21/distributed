@@ -155,18 +155,18 @@ const OrderScreen = () => {
                 {order.shippingAddress.address}, {order.shippingAddress.city}
               </p>
 
-{order.deliveryStatus === 'delivered' || (!order.deliveryStatus && order.isDelivered) ? (
-              <p className="text-green-600 mt-3">Delivered</p>
-            ) : order.deliveryStatus === 'preparing' ? (
-              <p className="text-blue-600 mt-3">Preparing for shipment</p>
-            ) : order.deliveryStatus === 'out_for_delivery' ? (
-              <p className="text-blue-600 mt-3">Out for delivery</p>
-            ) : (
-              <p className="text-yellow-600 mt-3">Pending delivery</p>
-            )}
-            {order.estimatedDeliveryDate && (
-              <p className="text-sm text-gray-500 mt-2">Estimated delivery: {String(order.estimatedDeliveryDate).substring(0, 10)}</p>
-            )}
+              {order.deliveryStatus === 'delivered' || (!order.deliveryStatus && order.isDelivered) ? (
+                <p className="text-green-600 mt-3">Delivered</p>
+              ) : order.deliveryStatus === 'preparing' ? (
+                <p className="text-blue-600 mt-3">Preparing for shipment</p>
+              ) : order.deliveryStatus === 'out_for_delivery' ? (
+                <p className="text-blue-600 mt-3">Out for delivery</p>
+              ) : (
+                <p className="text-yellow-600 mt-3">Pending delivery</p>
+              )}
+              {order.estimatedDeliveryDate && (
+                <p className="text-sm text-gray-500 mt-2">Estimated delivery: {String(order.estimatedDeliveryDate).substring(0, 10)}</p>
+              )}
             </div>
 
             {/* PAYMENT */}
@@ -185,101 +185,110 @@ const OrderScreen = () => {
             </div>
 
             {/* ITEMS */}
-<div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-  
-  <h2 className="font-black text-lg flex items-center gap-2 mb-5 text-slate-900 dark:text-white">
-    <FaShoppingBag className="text-green-500" />
-    Order Items
-  </h2>
+            <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
 
-  <div className="space-y-4">
+              <h2 className="font-black text-lg flex items-center gap-2 mb-5 text-slate-900 dark:text-white">
+                <FaShoppingBag className="text-green-500" />
+                Order Items
+              </h2>
 
-    {order.orderItems.map((item, i) => (
+              <div className="space-y-4">
 
-      <div
-        key={i}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-gray-100 dark:border-slate-800 rounded-2xl p-4 hover:shadow-md transition-all"
-      >
+                {order.orderItems.map((item, i) => (
 
-        {/* LEFT */}
-        <div className="flex items-center gap-4">
+                  <div
+                    key={i}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-gray-100 dark:border-slate-800 rounded-2xl p-4 hover:shadow-md transition-all"
+                  >
 
-          {/* IMAGE */}
-          <Link to={`/product/${item.product}`}>
-            <img
-              src={
-                item.image?.startsWith('http')
-                  ? item.image
-                  : `${BASE_URL}${item.image}`
-              }
-              alt={item.name}
-              className="w-20 h-20 object-cover rounded-xl border border-gray-200 dark:border-slate-700 hover:scale-105 transition-transform"
-            />
-          </Link>
+                    {/* LEFT */}
+                    <div className="flex items-center gap-4">
 
-          {/* INFO */}
-          <div className="space-y-1">
+                      {/* IMAGE */}
+                      <Link to={`/product/${item.product}`}>
+                        <img
+                          src={
+                            item.image?.startsWith('http')
+                              ? item.image
+                              : `${BASE_URL}${item.image}`
+                          }
+                          alt={item.name}
+                          className="w-20 h-20 object-cover rounded-xl border border-gray-200 dark:border-slate-700 hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            // If the image fails to load via BASE_URL, reroute to PC_1 over the private network lane
+                            const pc1Backend = "http://10.40.210.101:3000";
+                            const fallbackUrl = item.image?.startsWith('http') ? item.image : `${pc1Backend}${item.image}`;
 
-            <Link
-              to={`/product/${item.product}`}
-              className="font-bold text-sm md:text-base text-slate-900 dark:text-white hover:text-green-500 transition-colors"
-            >
-              {item.name}
-            </Link>
+                            if (e.target.src !== fallbackUrl) {
+                              e.target.src = fallbackUrl;
+                            }
+                          }}
+                        />
+                      </Link>
 
-            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
-              Qty: {item.qty}
-            </p>
+                      {/* INFO */}
+                      <div className="space-y-1">
 
-            <p className="text-xs md:text-sm font-semibold text-slate-700 dark:text-gray-300">
-              ETB {item.price}
-            </p>
+                        <Link
+                          to={`/product/${item.product}`}
+                          className="font-bold text-sm md:text-base text-slate-900 dark:text-white hover:text-green-500 transition-colors"
+                        >
+                          {item.name}
+                        </Link>
 
-            {/* STATUS */}
-            <div className="pt-1">
+                        <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                          Qty: {item.qty}
+                        </p>
 
-              {order.refundStatus === 'completed' ? (
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                  <FaCheckCircle />
-                  Refunded
-                </span>
-              ) : order.isDelivered ? (
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                  <FaCheckCircle />
-                  Delivered
-                </span>
-              ) : order.isPaid ? (
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                  <FaBoxOpen />
-                  Processing
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full">
-                  <FaTimesCircle />
-                  Pending Payment
-                </span>
-              )}
+                        <p className="text-xs md:text-sm font-semibold text-slate-700 dark:text-gray-300">
+                          ETB {item.price}
+                        </p>
 
+                        {/* STATUS */}
+                        <div className="pt-1">
+
+                          {order.refundStatus === 'completed' ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                              <FaCheckCircle />
+                              Refunded
+                            </span>
+                          ) : order.isDelivered ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                              <FaCheckCircle />
+                              Delivered
+                            </span>
+                          ) : order.isPaid ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                              <FaBoxOpen />
+                              Processing
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                              <FaTimesCircle />
+                              Pending Payment
+                            </span>
+                          )}
+
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RIGHT */}
+                    <div className="text-left sm:text-right">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Total
+                      </p>
+
+                      <p className="font-black text-base md:text-lg text-green-600">
+                        ETB {item.qty * item.price}
+                      </p>
+                    </div>
+
+                  </div>
+                ))}
+
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* RIGHT */}
-        <div className="text-left sm:text-right">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Total
-          </p>
-
-          <p className="font-black text-base md:text-lg text-green-600">
-            ETB {item.qty * item.price}
-          </p>
-        </div>
-
-      </div>
-    ))}
-
-  </div>
-</div>
 
           </div>
 

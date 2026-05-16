@@ -6,16 +6,16 @@ import { useAddToBrowseHistoryMutation } from '../store/slices/usersApiSlice';
 import { addToCart } from '../store/slices/cartSlice';
 import { toast } from 'react-toastify';
 import Loader from '../components/Loader';
-import { 
-  FaStar, 
-  FaShoppingCart, 
-  FaArrowLeft, 
-  FaCheckCircle, 
-  FaUserCircle, 
-  FaInfoCircle, 
+import {
+  FaStar,
+  FaShoppingCart,
+  FaArrowLeft,
+  FaCheckCircle,
+  FaUserCircle,
+  FaInfoCircle,
   FaTimes,
   FaTag
-} from 'react-icons/fa'; 
+} from 'react-icons/fa';
 // 👇 IMPORTANT: Make sure this import path is correct for your project structure
 import { BASE_URL } from '../store/slices/apiSlice';
 
@@ -25,7 +25,7 @@ const ProductDetailScreen = () => {
   const navigate = useNavigate();
 
   const [qty, setQty] = useState(1);
-  const [activeImage, setActiveImage] = useState(''); 
+  const [activeImage, setActiveImage] = useState('');
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
@@ -77,12 +77,12 @@ const ProductDetailScreen = () => {
       setComment('');
     } catch (err) {
       const errorMessage = err?.data?.message || err.error;
-      
+
       if (errorMessage.includes('delivered') || errorMessage.includes('already reviewed')) {
         setModalMessage(errorMessage);
         setShowModal(true);
       } else {
-        toast.error(errorMessage); 
+        toast.error(errorMessage);
       }
     }
   };
@@ -93,11 +93,11 @@ const ProductDetailScreen = () => {
   // 🖼️ Combine main image and gallery images into one array, filtering out nulls
   // This handles your two separate DB attributes correctly.
   const allImages = [product.image, ...(product.images || [])].filter(Boolean);
-  
+
   // 💰 Calculate Discounts
   const hasDiscount = product.originalPrice && product.originalPrice > product.price;
-  const discountPercentage = hasDiscount 
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
+  const discountPercentage = hasDiscount
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
   const savedAmount = hasDiscount ? product.originalPrice - product.price : 0;
 
@@ -114,32 +114,52 @@ const ProductDetailScreen = () => {
         {/* TOP SECTION: Product Info & Slider */}
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden mb-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-            
+
             {/* LEFT: Interactive Image Gallery */}
             <div className="p-8 bg-white dark:bg-slate-900 flex flex-col md:flex-row-reverse gap-6 items-start border-r border-gray-100 dark:border-slate-800">
-              
+
               {/* Main Large Image */}
               <div className="w-full aspect-square bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden shadow-inner flex items-center justify-center">
-                 {/* 👇 FIX: Ensure BASE_URL is prepended */}
-                 <img 
-                   src={`${BASE_URL}${currentDisplayImage}`} 
-                   alt={product.name} 
-                   className="w-full h-full object-contain p-4 transition-all duration-300"
-                 />
+                {/* 👇 FIX: Ensure BASE_URL is prepended */}
+                <img
+                  src={`${BASE_URL}${currentDisplayImage}`}
+                  alt={product.name}
+                  className="w-full h-full object-contain p-4 transition-all duration-300"
+                  onError={(e) => {
+                    // If the main product showcase image fails on PC_2, stream it straight from PC_1 over ZeroTier
+                    const pc1Backend = "http://10.40.210.101:3000";
+
+                    if (e.target.src !== `${pc1Backend}${currentDisplayImage}`) {
+                      e.target.src = `${pc1Backend}${currentDisplayImage}`;
+                    }
+                  }}
+                />
               </div>
-              
+
               {/* Thumbnail Strip */}
               {allImages.length > 1 && (
                 <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:max-h-[500px] w-full md:w-24 pb-2 md:pb-0 scrollbar-hide">
                   {allImages.map((imgPath, index) => (
-                    <button 
-                      key={index} 
+                    <button
+                      key={index}
                       // 👇 FIX: Removed onMouseEnter. Only changes on Click now.
                       onClick={() => setActiveImage(imgPath)}
                       className={`w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 overflow-hidden flex-shrink-0 transition-all bg-white dark:bg-slate-800 ${currentDisplayImage === imgPath ? 'border-red-500 ring-2 ring-red-500/20' : 'border-gray-200 dark:border-slate-700 hover:border-red-300'}`}
                     >
-                       {/* 👇 FIX: Ensure BASE_URL is prepended to thumbnails too */}
-                       <img src={`${BASE_URL}${imgPath}`} alt={`thumbnail ${index + 1}`} className="w-full h-full object-cover" />
+                      {/* 👇 FIX: Ensure BASE_URL is prepended to thumbnails too */}
+                      <img
+                        src={`${BASE_URL}${imgPath}`}
+                        alt={`thumbnail ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Reroute specific carousel thumbnail images to PC_1 over the ZeroTier pipeline if local load fails
+                          const pc1Backend = "http://10.40.210.101:3000";
+
+                          if (e.target.src !== `${pc1Backend}${imgPath}`) {
+                            e.target.src = `${pc1Backend}${imgPath}`;
+                          }
+                        }}
+                      />
                     </button>
                   ))}
                 </div>
@@ -156,14 +176,14 @@ const ProductDetailScreen = () => {
               </h1>
 
               <div className="flex items-center gap-4 mb-6">
-                 <div className="flex text-yellow-400 text-sm">
-                   {[...Array(5)].map((_, i) => (
-                     <FaStar key={i} className={i < product.rating ? 'text-yellow-400' : 'text-gray-200'} />
-                   ))}
-                 </div>
-                 <span className="text-sm font-bold text-gray-500 dark:text-slate-400 underline underline-offset-4 cursor-pointer hover:text-gray-900 dark:hover:text-slate-100">
-                   {product.rating.toFixed(1)} ({product.numReviews} Reviews)
-                 </span>
+                <div className="flex text-yellow-400 text-sm">
+                  {[...Array(5)].map((_, i) => (
+                    <FaStar key={i} className={i < product.rating ? 'text-yellow-400' : 'text-gray-200'} />
+                  ))}
+                </div>
+                <span className="text-sm font-bold text-gray-500 dark:text-slate-400 underline underline-offset-4 cursor-pointer hover:text-gray-900 dark:hover:text-slate-100">
+                  {product.rating.toFixed(1)} ({product.numReviews} Reviews)
+                </span>
               </div>
 
               {/* 💸 Dynamic Pricing Block */}
@@ -203,39 +223,39 @@ const ProductDetailScreen = () => {
               </div>
 
               <div className="bg-gray-50 dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 mt-auto">
-                 <div className="flex justify-between items-center mb-4">
-                    <span className="font-bold text-gray-700 dark:text-slate-200">Availability:</span>
-                    {product.countInStock > 0 ? (
-                      <span className="text-green-600 font-bold flex items-center gap-1 bg-green-100 px-3 py-1 rounded-full text-sm">
-                        <FaCheckCircle/> {product.countInStock} In Stock
-                      </span>
-                    ) : (
-                      <span className="text-red-500 font-bold bg-red-100 px-3 py-1 rounded-full text-sm">Out of Stock</span>
-                    )}
-                 </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold text-gray-700 dark:text-slate-200">Availability:</span>
+                  {product.countInStock > 0 ? (
+                    <span className="text-green-600 font-bold flex items-center gap-1 bg-green-100 px-3 py-1 rounded-full text-sm">
+                      <FaCheckCircle /> {product.countInStock} In Stock
+                    </span>
+                  ) : (
+                    <span className="text-red-500 font-bold bg-red-100 px-3 py-1 rounded-full text-sm">Out of Stock</span>
+                  )}
+                </div>
 
-                 {product.countInStock > 0 && (
-                   <div className="flex items-center gap-4 mb-6">
-                      <span className="font-bold text-gray-700 dark:text-slate-200">Quantity:</span>
-                      <select 
-                        value={qty} 
-                        onChange={(e) => setQty(Number(e.target.value))}
-                        className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-slate-100 rounded-xl px-4 py-2 font-bold focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none w-24"
-                      >
-                        {[...Array(product.countInStock).keys()].map((x) => (
-                          <option key={x + 1} value={x + 1}>{x + 1}</option>
-                        ))}
-                      </select>
-                   </div>
-                 )}
+                {product.countInStock > 0 && (
+                  <div className="flex items-center gap-4 mb-6">
+                    <span className="font-bold text-gray-700 dark:text-slate-200">Quantity:</span>
+                    <select
+                      value={qty}
+                      onChange={(e) => setQty(Number(e.target.value))}
+                      className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-slate-100 rounded-xl px-4 py-2 font-bold focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none w-24"
+                    >
+                      {[...Array(product.countInStock).keys()].map((x) => (
+                        <option key={x + 1} value={x + 1}>{x + 1}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                 <button 
-                   onClick={addToCartHandler}
-                   disabled={product.countInStock === 0}
-                   className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-black text-lg transition-all shadow-lg shadow-red-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none flex items-center justify-center gap-3"
-                 >
-                   <FaShoppingCart /> {product.countInStock === 0 ? 'Currently Unavailable' : 'Add to Cart'}
-                 </button>
+                <button
+                  onClick={addToCartHandler}
+                  disabled={product.countInStock === 0}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-black text-lg transition-all shadow-lg shadow-red-200 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none flex items-center justify-center gap-3"
+                >
+                  <FaShoppingCart /> {product.countInStock === 0 ? 'Currently Unavailable' : 'Add to Cart'}
+                </button>
               </div>
             </div>
           </div>
@@ -273,8 +293,8 @@ const ProductDetailScreen = () => {
               <form onSubmit={submitReviewHandler} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Rating</label>
-                  <select 
-                    value={rating} 
+                  <select
+                    value={rating}
                     onChange={(e) => setRating(e.target.value)}
                     required
                     className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-slate-100 rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-red-500"
@@ -289,7 +309,7 @@ const ProductDetailScreen = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Comment</label>
-                  <textarea 
+                  <textarea
                     row="3"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
@@ -298,9 +318,9 @@ const ProductDetailScreen = () => {
                     placeholder="What did you think about the product?"
                   ></textarea>
                 </div>
-                <button 
+                <button
                   disabled={loadingProductReview}
-                  type="submit" 
+                  type="submit"
                   className="w-full bg-gray-900 hover:bg-black text-white py-3.5 rounded-xl font-bold transition-all disabled:bg-gray-400"
                 >
                   {loadingProductReview ? <Loader /> : 'Submit Review'}
@@ -320,12 +340,12 @@ const ProductDetailScreen = () => {
 
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
+          <div
             className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
             onClick={() => setShowModal(false)}
           ></div>
           <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-sm relative z-10 transform transition-all scale-100 p-8 text-center animate-fade-in-up">
-            <button 
+            <button
               onClick={() => setShowModal(false)}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
             >
@@ -338,7 +358,7 @@ const ProductDetailScreen = () => {
             <p className="text-gray-600 dark:text-slate-300 font-medium leading-relaxed mb-8">
               {modalMessage}
             </p>
-            <button 
+            <button
               onClick={() => setShowModal(false)}
               className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl transition-colors shadow-lg shadow-blue-200"
             >

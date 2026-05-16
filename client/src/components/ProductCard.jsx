@@ -25,7 +25,7 @@ const ProductCard = ({ product }) => {
     : 0;
 
   const addToCartHandler = (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     if (product.countInStock > 0) {
       dispatch(addToCart({
         ...product,
@@ -62,15 +62,24 @@ const ProductCard = ({ product }) => {
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm hover:shadow-md border border-gray-100 dark:border-slate-800 overflow-hidden transition-all duration-300 flex flex-col h-full group">
-      
+
       {/* 🖼️ Image Section - Minimized */}
       <Link to={`/product/${product._id}`} className="relative block h-40 bg-gray-50 dark:bg-slate-800 overflow-hidden">
-        <img 
-          src={`${BASE_URL}${product.image}`} 
-          alt={product.name} 
+        <img
+          src={`${BASE_URL}${product.image}`}
+          alt={product.name}
           loading="lazy"
           decoding="async"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={(e) => {
+            // If the image fails to load (e.g., PC_2 doesn't have it locally),
+            // we force the browser to request it directly from PC_1 over the ZeroTier link.
+            const pc1Backend = "http://10.40.210.101:3000";
+
+            if (e.target.src !== `${pc1Backend}${product.image}`) {
+              e.target.src = `${pc1Backend}${product.image}`;
+            }
+          }}
         />
 
         <button
@@ -78,15 +87,14 @@ const ProductCard = ({ product }) => {
           onClick={favoriteHandler}
           disabled={addingFavorite || removingFavorite}
           title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-          className={`absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition-all ${
-            isFavorite
+          className={`absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition-all ${isFavorite
               ? 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
               : 'border-gray-200 bg-white/90 text-gray-400 hover:border-red-200 hover:text-red-500'
-          } disabled:opacity-60`}
+            } disabled:opacity-60`}
         >
           {isFavorite ? <FaHeart size={12} /> : <FaRegHeart size={12} />}
         </button>
-        
+
         {/* Discount Badge - Smaller */}
         {discountPercentage > 0 && (
           <div className="absolute top-1.5 left-1.5 bg-[#ff0036] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
@@ -97,16 +105,16 @@ const ProductCard = ({ product }) => {
         {/* Out of Stock Badge */}
         {product.countInStock === 0 && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
-             <span className="bg-gray-900 text-white px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">
-               Sold Out
-             </span>
+            <span className="bg-gray-900 text-white px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">
+              Sold Out
+            </span>
           </div>
         )}
       </Link>
 
       {/* 📝 Details Section - Compact */}
       <div className="p-2.5 flex flex-col flex-grow bg-white dark:bg-slate-900">
-        
+
         {/* Title - Smaller */}
         <Link to={`/product/${product._id}`}>
           <h3 className="text-xs font-medium text-gray-800 dark:text-slate-100 line-clamp-2 hover:text-[#ff0036] transition-colors leading-tight mb-1.5 min-h-[2rem]">
@@ -131,7 +139,7 @@ const ProductCard = ({ product }) => {
 
         {/* Price & Action Row - Compact */}
         <div className="mt-auto flex items-end justify-between">
-          
+
           {/* Price Block */}
           <div>
             <div className="flex items-baseline gap-0.5">
@@ -140,7 +148,7 @@ const ProductCard = ({ product }) => {
                 {product.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            
+
             {/* Original Price */}
             <div className="h-3 mt-0.5">
               {discountPercentage > 0 && (
@@ -152,15 +160,14 @@ const ProductCard = ({ product }) => {
           </div>
 
           {/* Compact Cart Button */}
-          <button 
+          <button
             onClick={addToCartHandler}
             disabled={product.countInStock === 0}
             title="Add to Cart"
-            className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-              product.countInStock === 0 
-                ? 'bg-gray-100 text-gray-300 cursor-not-allowed' 
+            className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all ${product.countInStock === 0
+                ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                 : 'bg-red-50 text-[#ff0036] hover:bg-[#ff0036] hover:text-white'
-            }`}
+              }`}
           >
             <FaShoppingCart size={11} />
           </button>

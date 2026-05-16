@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import { io } from 'socket.io-client';
 // Buyer Components
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
@@ -78,8 +78,37 @@ const RouteScopeSync = () => {
   return null;
 };
 
+// Connects the React client directly to its companion peer backend server instance
+const socket = io('http://localhost:3000', {
+  withCredentials: true,
+  transports: ['websocket', 'polling']
+});
+
 const App = () => {
   const { theme } = useTheme();
+
+  useEffect(() => {
+    // Listen for live peer updates on products
+    socket.on('peer-product-added', (newProduct) => {
+      console.log('Real-time synchronization data package received:', newProduct);
+      
+      // Instantly alert the current screen user with toast notification
+      if (typeof window !== 'undefined') {
+        // You can import 'toast' from react-toastify if you want to use it here
+        // toast.info(`New product synchronized: ${newProduct.name || 'Market item'}`);
+      }
+    });
+
+    // Listen for live peer updates on orders
+    socket.on('peer-order-placed', (newOrder) => {
+      console.log('Real-time peer network order synchronization:', newOrder);
+    });
+
+    return () => {
+      socket.off('peer-product-added');
+      socket.off('peer-order-placed');
+    };
+  }, []);
 
   return (
     <Router>

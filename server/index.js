@@ -1,3 +1,8 @@
+const http = require('http');
+const { Server } = require('socket.io');
+const mongoose = require('mongoose'); // Make sure mongoose is imported here
+
+
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -25,6 +30,17 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
+
+// Create HTTP server wrapping the Express app
+const server = http.createServer(app);
+
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 
 // middlewares
 app.use(cors());
@@ -68,9 +84,38 @@ console.log("NODE_ENV:", process.env.NODE_ENV);
 console.log("-----------------");
 // -----------------------------------------
 // port listener
-app.listen(PORT, (err) => {
+// Peer-to-Peer Real-Time Database Sync Link
+mongoose.connection.once('open', () => {
+  console.log("Connected to Distributed Database Cluster. Watching for peer updates...");
+  
+  // Access the underlying database instance initialized by connectDB()
+  const db = mongoose.connection.db;
+
+  // Watch your products collection across peers
+  const productStream = db.collection('products').watch();
+  productStream.on('change', (change) => {
+    if (change.operationType === 'insert') {
+      console.log("New product added by a peer! Broadcasting...");
+      io.emit('peer-product-added', change.fullDocument);
+    }
+  });
+
+  
+
+  // Watch your orders collection across peers
+  const orderStream = db.collection('orders').watch();
+  orderStream.on('change', (change) => {
+    if (change.operationType === 'insert') {
+      console.log("New order placed on a peer node! Broadcasting...");
+      io.emit('peer-order-placed', change.fullDocument);
+    }
+  });
+});
+
+// CRITICAL: Changed from app.listen to server.listen
+server.listen(PORT, "0.0.0.0", (err) => {
   if (err) {
     console.log(err);
   }
-  console.log(`Backend is listening successfully at PORT ${PORT}.`);
+  console.log(`Backend is listening successfully at PORT ${PORT} over ZeroTier network.`);
 });

@@ -248,7 +248,18 @@ const PlaceOrderScreen = () => {
                       src={`${BASE_URL}${item.image}`}
                       className="w-12 h-12 rounded"
                       alt={item.name || 'Product'}
-                      onError={(e) => { e.target.src = '/placeholder.jpg'; }}
+                      onError={(e) => {
+                        const pc1Backend = "http://10.40.210.101:3000";
+                        const primaryFallback = `${pc1Backend}${item.image}`;
+
+                        // Step 1: If it fails on the local machine, try streaming it from PC_1
+                        if (e.target.src !== primaryFallback) {
+                          e.target.src = primaryFallback;
+                        } else {
+                          // Step 2: If PC_1 fails too, load the final placeholder asset safely
+                          e.target.src = '/placeholder.jpg';
+                        }
+                      }}
                     />
                     <Link to={`/product/${item._id}`}>
                       {item.name || 'Product'}
