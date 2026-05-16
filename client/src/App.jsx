@@ -1,14 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { io } from 'socket.io-client';
+import { getActiveBackendUrl, rotateBackendNode } from './utils/networkConfig';
+
 // Buyer Components
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 
 // Seller Components
-import SellerLayout from './components/seller/SellerLayout'; // 👈 NEW
+import SellerLayout from './components/seller/SellerLayout';
 import SellerRoute from './components/SellerRoute';
 import SellerDashboardLayout from './components/seller/SellerDashboardLayout';
 
@@ -77,12 +79,6 @@ const RouteScopeSync = () => {
 
   return null;
 };
-
-// Connects the React client directly to its companion peer backend server instance
-const socket = io('http://localhost:3000', {
-  withCredentials: true,
-  transports: ['websocket', 'polling']
-});
 
 const App = () => {
   const { theme } = useTheme();
@@ -153,7 +149,6 @@ const App = () => {
           </Route>
 
         </Route>
-
 
         {/* =======================================
             🏪 SELLER ROUTES (Uses SellerLayout) 
