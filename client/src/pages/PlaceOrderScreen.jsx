@@ -30,6 +30,41 @@ const PlaceOrderScreen = () => {
   const taxPrice = cart?.taxPrice || 0;
   const totalPrice = cart?.totalPrice || 0;
 
+  const pendingPayItem = (() => {
+    try {
+      const stored = localStorage.getItem('pendingPayItem');
+      return stored ? JSON.parse(stored) : null;
+    } catch (err) {
+      return null;
+    }
+  })();
+
+  const activeCartItems = pendingPayItem ? [pendingPayItem] : cartItems;
+
+  const activeTotals = (() => {
+    if (!pendingPayItem) {
+      return {
+        itemsPrice: Number(itemsPrice),
+        shippingPrice: Number(shippingPrice),
+        taxPrice: Number(taxPrice),
+        totalPrice: Number(totalPrice),
+      };
+    }
+
+    const itemTotal = Number(pendingPayItem.price || 0) * Number(pendingPayItem.qty || 1);
+    const fullItemsPrice = Number(itemsPrice) || cartItems.reduce((acc, item) => acc + Number(item.price || 0) * Number(item.qty || 1), 0);
+    const shippingForItem = fullItemsPrice > 0 ? Number(shippingPrice || 0) * (itemTotal / fullItemsPrice) : 0;
+    const taxForItem = fullItemsPrice > 0 ? Number(taxPrice || 0) * (itemTotal / fullItemsPrice) : 0;
+    const totalForItem = Number((itemTotal + shippingForItem + taxForItem).toFixed(2));
+
+    return {
+      itemsPrice: Number(itemTotal.toFixed(2)),
+      shippingPrice: Number(shippingForItem.toFixed(2)),
+      taxPrice: Number(taxForItem.toFixed(2)),
+      totalPrice: totalForItem,
+    };
+  })();
+
   useEffect(() => {
     if (!shippingAddress?.address) {
       navigate('/shipping');
@@ -49,7 +84,7 @@ const PlaceOrderScreen = () => {
       return;
     }
 
-    if (!cartItems || cartItems.length === 0) {
+    if (!activeCartItems || activeCartItems.length === 0) {
       toast.error('Cart is empty');
       return;
     }
@@ -58,15 +93,16 @@ const PlaceOrderScreen = () => {
     if (paymentMethod !== 'Chapa') {
       try {
         const order = await createOrder({
-          orderItems: cartItems,
+          orderItems: activeCartItems,
           shippingAddress,
           paymentMethod,
-          itemsPrice,
-          shippingPrice,
-          taxPrice,
-          totalPrice,
+          itemsPrice: activeTotals.itemsPrice,
+          shippingPrice: activeTotals.shippingPrice,
+          taxPrice: activeTotals.taxPrice,
+          totalPrice: activeTotals.totalPrice,
         }).unwrap();
         dispatch(clearCartItems());
+        localStorage.removeItem('pendingPayItem');
         navigate(`/order/${order._id}`);
       } catch (err) {
         toast.error(err?.data?.message || 'Order creation failed');
@@ -83,7 +119,7 @@ const PlaceOrderScreen = () => {
       const lastName = fullName.split(' ').slice(1).join(' ') || 'Customer';
 
       // Sanitize cart items — ensure all required fields are plain serializable objects
-      const sanitizedItems = cartItems.map((item) => ({
+      const sanitizedItems = activeCartItems.map((item) => ({
         _id: item._id,
         name: item.name,
         qty: item.qty,
@@ -98,7 +134,7 @@ const PlaceOrderScreen = () => {
 
       const payload = {
         // Payment info
-        amount: Math.round(Number(totalPrice)).toString(),
+        amount: Math.round(Number(activeTotals.totalPrice)).toString(),
         email: userInfo?.email || 'customer@gulit.com',
         first_name: firstName,
         last_name: lastName,
@@ -107,10 +143,10 @@ const PlaceOrderScreen = () => {
         orderItems: sanitizedItems,
         shippingAddress,
         paymentMethod,
-        itemsPrice,
-        shippingPrice,
-        taxPrice,
-        totalPrice,
+        itemsPrice: activeTotals.itemsPrice,
+        shippingPrice: activeTotals.shippingPrice,
+        taxPrice: activeTotals.taxPrice,
+        totalPrice: activeTotals.totalPrice,
       };
 
       const res = await initializeChapaPayment(payload).unwrap();
@@ -238,10 +274,10 @@ const PlaceOrderScreen = () => {
               <FaShoppingBag className="text-green-500" /> Items
             </h2>
 
-            {!cartItems || cartItems.length === 0 ? (
+            {!activeCartItems || activeCartItems.length === 0 ? (
               <p className="text-red-500">Cart empty</p>
             ) : (
-              cartItems.map((item, i) => (
+              activeCartItems.map((item, i) => (
                 <div key={i} className="flex justify-between border-b py-3">
                   <div className="flex gap-3 items-center">
                     <img
@@ -294,22 +330,22 @@ const PlaceOrderScreen = () => {
           <div className="space-y-2">
             <div className="flex justify-between">
               <span>Items</span>
-              <span>ETB {itemsPrice}</span>
+              <span>ETB {activeTotals.itemsPrice}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Shipping</span>
-              <span>ETB {shippingPrice}</span>
+              <span>ETB {activeTotals.shippingPrice}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Tax</span>
-              <span>ETB {taxPrice}</span>
+              <span>ETB {activeTotals.taxPrice}</span>
             </div>
 
             <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
               <span>Total</span>
-              <span className="text-green-600">ETB {totalPrice}</span>
+              <span className="text-green-600">ETB {activeTotals.totalPrice}</span>
             </div>
           </div>
 
@@ -321,7 +357,7 @@ const PlaceOrderScreen = () => {
 
           <button
             onClick={placeOrderHandler}
-            disabled={isLoading || isCreatingOrder || isProcessingPayment || !cartItems || cartItems.length === 0}
+            disabled={isLoading || isCreatingOrder || isProcessingPayment || !activeCartItems || activeCartItems.length === 0}
             className="w-full mt-5 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {isProcessingPayment ? <Loader /> : 'Place Order'}

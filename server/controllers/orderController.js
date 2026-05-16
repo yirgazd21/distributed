@@ -88,11 +88,17 @@ const addOrderItems = async (req, res) => {
 // @access  Private
 const getOrderById = async (req, res) => {
   const order = await Order.findById(req.params.id).populate('user', 'name email');
-  if (order) {
-    res.json(order);
-  } else {
-    res.status(404).json({ message: 'Order not found' });
+  if (!order) {
+    return res.status(404).json({ message: 'Order not found' });
   }
+
+  // Authorization: only the order owner or an admin may view this order
+  const orderUserId = order.user && order.user._id ? order.user._id.toString() : String(order.user);
+  if (orderUserId !== req.user._id.toString() && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Not authorized to view this order' });
+  }
+
+  res.json(order);
 };
 
 // @desc    Get logged-in user's paid orders

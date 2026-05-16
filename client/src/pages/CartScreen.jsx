@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaTrash, FaArrowLeft, FaShoppingBag, FaTag } from 'react-icons/fa';
-import { addToCart, removeFromCart } from '../store/slices/cartSlice';
+import { addToCart, removeFromCart, savePaymentMethod } from '../store/slices/cartSlice';
+import { toast } from 'react-toastify';
 import { BASE_URL } from '../store/slices/apiSlice';
 
 const CartScreen = () => {
@@ -11,6 +12,7 @@ const CartScreen = () => {
 
   const cart = useSelector((state) => state.cart);
   const { cartItems } = cart;
+  const { userInfo } = useSelector((state) => state.auth) || {};
 
   const addToCartHandler = async (product, qty) => {
     dispatch(addToCart({ ...product, qty }));
@@ -21,7 +23,25 @@ const CartScreen = () => {
   };
 
   const checkoutHandler = () => {
+    localStorage.removeItem('pendingPayItem');
     navigate('/login?redirect=/shipping');
+  };
+
+  const payThisItemHandler = (item) => {
+    localStorage.setItem('pendingPayItem', JSON.stringify(item));
+    dispatch(savePaymentMethod('Chapa'));
+
+    if (!userInfo) {
+      const redirectTarget = cart.shippingAddress?.address ? '/payment' : '/shipping';
+      navigate(`/login?redirect=${redirectTarget}`);
+      return;
+    }
+
+    if (!cart.shippingAddress?.address) {
+      navigate('/shipping');
+    } else {
+      navigate('/payment');
+    }
   };
 
   // 💰 NEW: Calculate total savings across all discounted items in the cart
@@ -120,12 +140,21 @@ const CartScreen = () => {
                           {(item.price * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })} ETB
                         </div>
 
-                        <button
-                          onClick={() => removeFromCartHandler(item.cartItemId || item._id)}
-                          className="w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
-                        >
-                          <FaTrash size={14} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => removeFromCartHandler(item.cartItemId || item._id)}
+                            className="w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
+                          >
+                            <FaTrash size={14} />
+                          </button>
+
+                          <button
+                            onClick={() => payThisItemHandler(item)}
+                            className="ml-2 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500"
+                          >
+                            Pay for this item
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

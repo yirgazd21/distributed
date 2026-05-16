@@ -50,6 +50,7 @@ const OrderSuccessScreen = () => {
 
         localStorage.removeItem('pendingTxRef');
         localStorage.removeItem('pendingOrderId');
+        localStorage.removeItem('pendingPayItem');
         // Remove only the products that were paid for in this order
         try {
           const productIds = (order.orderItems || []).map((it) => String(it.product));
@@ -83,6 +84,7 @@ const OrderSuccessScreen = () => {
         if (alreadyPaid) {
           localStorage.removeItem('pendingTxRef');
           localStorage.removeItem('pendingOrderId');
+          localStorage.removeItem('pendingPayItem');
           try {
             const productIds = (order.orderItems || []).map((it) => String(it.product));
             if (productIds.length > 0) {
