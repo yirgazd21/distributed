@@ -28,7 +28,7 @@ import CartScreen from './pages/CartScreen';
 import CategoryScreen from './pages/CategoryScreen';
 
 // Seller Pages
-import SellerLandingScreen from './pages/seller/SellerLandingScreen'; 
+import SellerLandingScreen from './pages/seller/SellerLandingScreen';
 import SellerRegisterScreen from './pages/seller/SellerRegisterScreen';
 import SellerLoginScreen from './pages/seller/SellerLoginScreen';
 import SellerForgotPasswordScreen from './pages/seller/SellerForgotPasswordScreen';
@@ -91,7 +91,7 @@ const App = () => {
     // Listen for live peer updates on products
     socket.on('peer-product-added', (newProduct) => {
       console.log('Real-time synchronization data package received:', newProduct);
-      
+
       // Instantly alert the current screen user with toast notification
       if (typeof window !== 'undefined') {
         // You can import 'toast' from react-toastify if you want to use it here
@@ -100,8 +100,9 @@ const App = () => {
     });
 
     // Listen for live peer updates on orders
-    socket.on('peer-order-placed', (newOrder) => {
-      console.log('Real-time peer network order synchronization:', newOrder);
+    const socket = io('http://10.40.210.21:3000', {
+      withCredentials: true,
+      transports: ['websocket', 'polling']
     });
 
     return () => {
@@ -114,7 +115,7 @@ const App = () => {
     <Router>
       <RouteScopeSync />
       <Routes>
-        
+
         {/* =======================================
             🛍️ BUYER ROUTES (Uses standard Layout) 
             ======================================= */}
@@ -162,15 +163,15 @@ const App = () => {
             ======================================= */}
         <Route element={<SellerDashboardLayout />}>
           <Route path="" element={<SellerRoute />}>
-          <Route path="/seller/dashboard" element={<SellerDashboardScreen />} />
-          <Route path="/seller/products" element={<SellerProductListScreen />} />
-          <Route path="/seller/products/add" element={<SellerProductEditScreen />} />
-          <Route path="/seller/products/:id/edit" element={<SellerProductEditScreen />} />
-          <Route path="/seller/orders" element={<SellerOrderListScreen />} />
-          <Route path="/seller/order/:id" element={<SellerOrderDetailsScreen />} />
-          <Route path="/seller/wallet" element={<SellerWalletScreen />} />
-          <Route path="/seller/inbox" element={<SellerInboxScreen />} />
-          <Route path="/seller/settings" element={<SellerSettingsScreen />} />
+            <Route path="/seller/dashboard" element={<SellerDashboardScreen />} />
+            <Route path="/seller/products" element={<SellerProductListScreen />} />
+            <Route path="/seller/products/add" element={<SellerProductEditScreen />} />
+            <Route path="/seller/products/:id/edit" element={<SellerProductEditScreen />} />
+            <Route path="/seller/orders" element={<SellerOrderListScreen />} />
+            <Route path="/seller/order/:id" element={<SellerOrderDetailsScreen />} />
+            <Route path="/seller/wallet" element={<SellerWalletScreen />} />
+            <Route path="/seller/inbox" element={<SellerInboxScreen />} />
+            <Route path="/seller/settings" element={<SellerSettingsScreen />} />
           </Route>
         </Route>
 
