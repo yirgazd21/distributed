@@ -87,29 +87,40 @@ const socket = io('http://localhost:3000', {
 const App = () => {
   const { theme } = useTheme();
 
+  const [socket, setSocket] = useState(null);
+  const [currentBackend, setCurrentBackend] = useState(getActiveBackendUrl());
+
   useEffect(() => {
-    // Listen for live peer updates on products
-    socket.on('peer-product-added', (newProduct) => {
-      console.log('Real-time synchronization data package received:', newProduct);
-
-      // Instantly alert the current screen user with toast notification
-      if (typeof window !== 'undefined') {
-        // You can import 'toast' from react-toastify if you want to use it here
-        // toast.info(`New product synchronized: ${newProduct.name || 'Market item'}`);
-      }
-    });
-
-    // Listen for live peer updates on orders
-    const socket = io('http://10.40.210.21:3000', {
+    // Initialize connection to the currently active node
+    const socketInstance = io(currentBackend, {
       withCredentials: true,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 3, // Try 3 times before giving up on this node
+      timeout: 5000            // 5 seconds timeout before triggering fallback
     });
 
+    socketInstance.on('connect', () => {
+      console.log(`✅ Linked safely to live cluster node: ${currentBackend} (ID: ${socketInstance.id})`);
+    });
+
+    socketInstance.on('connect_error', () => {
+      console.error(`❌ Node ${currentBackend} is unreachable.`);
+      
+      // Close out current failing socket instance safely
+      socketInstance.disconnect();
+      
+      // Rotate target IPs across your network array
+      const nextNode = rotateBackendNode(currentBackend);
+      setCurrentBackend(nextNode);
+    });
+
+    setSocket(socketInstance);
+
+    // Clean up connections on component dismount
     return () => {
-      socket.off('peer-product-added');
-      socket.off('peer-order-placed');
+      socketInstance.disconnect();
     };
-  }, []);
+  }, [currentBackend]);
 
   return (
     <Router>
